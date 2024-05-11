@@ -742,11 +742,7 @@
         self.popupWindow.windowLevel = UIWindowLevelQMUIAlertView;
         QMUIPopContainerViewController *viewController = [[QMUIPopContainerViewController alloc] init];
         ((QMUIPopContainerMaskControl *)viewController.view).popupContainerView = self;
-        if (self.automaticallyHidesWhenUserTap) {
-            viewController.view.backgroundColor = self.maskViewBackgroundColor;
-        } else {
-            viewController.view.backgroundColor = UIColorClear;
-        }
+        viewController.view.backgroundColor = self.maskViewBackgroundColor;
         viewController.supportedOrientationMask = [QMUIHelper visibleViewController].supportedInterfaceOrientations;
         self.popupWindow.rootViewController = viewController;// 利用 rootViewController 来管理横竖屏
         [self.popupWindow.rootViewController.view addSubview:self];
