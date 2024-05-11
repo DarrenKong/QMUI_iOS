@@ -928,6 +928,9 @@
         if (!self.popupContainerView.automaticallyHidesWhenUserTap) {
             return nil;
         }
+        if (self.popupContainerView.maskViewBackgroundColor) {
+            return nil;
+        }
     }
     return result;
 }
