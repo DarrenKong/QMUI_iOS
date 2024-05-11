@@ -926,9 +926,9 @@
     UIView *result = [super hitTest:point withEvent:event];
     if (result == self) {
         if (!self.popupContainerView.automaticallyHidesWhenUserTap) {
-            return nil;
-        }
-        if (self.popupContainerView.maskViewBackgroundColor) {
+            if (self.popupContainerView.maskViewBackgroundColor) {
+                return result;
+            }
             return nil;
         }
     }
