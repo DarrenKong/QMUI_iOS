@@ -31,6 +31,7 @@ typedef NS_ENUM(NSUInteger, QMUIAssetAuthorizationStatus) {
     QMUIAssetAuthorizationStatusNotDetermined,      // 还不确定有没有授权
     QMUIAssetAuthorizationStatusAuthorized,         // 已经授权
     QMUIAssetAuthorizationStatusNotAuthorized       // 手动禁止了授权
+    QMUIAssetAuthorizationStatusLimited
 };
 
 typedef void (^QMUIWriteAssetCompletionBlock)(QMUIAsset *asset, NSError *error);

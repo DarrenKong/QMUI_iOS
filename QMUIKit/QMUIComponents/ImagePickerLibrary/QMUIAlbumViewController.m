@@ -100,6 +100,66 @@
 
 @end
 
+/**
+ * 用户设置了相册限制提示页面
+ *
+ * @class QMUIAlbumAutnLimitedTipView
+ */
+@interface QMUIAlbumAutnLimitedTipView : UIView
+
+// 用户选择设置相册权限回调
+@property (nonatomic, copy) void (^setAlbumAutnHandle)(void);
+
+@end
+
+@implementation QMUIAlbumAutnLimitedTipView
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    if (self = [super initWithFrame:frame]) {
+        CGFloat width = CGRectGetWidth(frame);
+        CGFloat height = CGRectGetHeight(frame);
+        
+        // 去设置按钮
+        CGFloat setAuthButtonHeight = height / 2;
+        CGFloat setAuthButtonFontSize = setAuthButtonHeight / 2.5;
+        CGRect setAuthButtonFrame = CGRectMake(width - height, 0, height, height);;
+        setAuthButtonFrame.size.height = setAuthButtonHeight;
+        setAuthButtonFrame.origin.y = (height - setAuthButtonHeight) / 2;
+        setAuthButtonFrame.origin.x = width - height - 10;
+        UIButton *setAuthButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        [setAuthButton setBackgroundColor:UIColorMake(5, 87, 255)];
+        [setAuthButton setAutoresizingMask:UIViewAutoresizingFlexibleLeftMargin];
+        [setAuthButton setFrame:setAuthButtonFrame];
+        [setAuthButton setClipsToBounds:YES];
+        [setAuthButton.layer setCornerRadius:6];
+        [setAuthButton.titleLabel setFont:[UIFont systemFontOfSize:setAuthButtonFontSize]];
+        [setAuthButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        [setAuthButton setTitle:@"去设置" forState:UIControlStateNormal];
+        [setAuthButton addTarget:self action:@selector(userSetAlbumAutnAction) forControlEvents:UIControlEventTouchUpInside];
+        [self addSubview:setAuthButton];
+        
+        // 提示语
+        NSString *tipText = [NSString stringWithFormat:@"APP当前设置了相册访问限制，您可以通过点击\"%@\"按钮添加可以被访问的照片", setAuthButton.titleLabel.text];
+        CGRect tipLabelFrame = setAuthButtonFrame;
+        tipLabelFrame.origin.x = 10;
+        tipLabelFrame.size.width = CGRectGetMinX(setAuthButtonFrame) - CGRectGetMinX(tipLabelFrame) - 5;
+        UILabel *tipLabel = [[UILabel alloc] initWithFrame:tipLabelFrame];
+        [tipLabel setText:tipText];
+        [tipLabel setTextAlignment:NSTextAlignmentLeft];
+        [tipLabel setNumberOfLines:0];
+        [tipLabel setTextColor:[UIColor blackColor]];
+        [tipLabel setFont:setAuthButton.titleLabel.font];
+        [tipLabel setAutoresizingMask:UIViewAutoresizingFlexibleWidth];
+        [self addSubview:tipLabel];
+    }
+    return self;
+}
+
+- (void)userSetAlbumAutnAction {
+    !_setAlbumAutnHandle ?: _setAlbumAutnHandle();
+}
+
+@end
 
 #pragma mark - QMUIAlbumViewController (UIAppearance)
 
@@ -125,36 +185,50 @@
 
 #pragma mark - QMUIAlbumViewController
 
-@interface QMUIAlbumViewController ()
+@interface QMUIAlbumViewController ()<PHPhotoLibraryChangeObserver>
 
 @property(nonatomic, strong) NSMutableArray<QMUIAssetsGroup *> *albumsArray;
 @property(nonatomic, strong) QMUIImagePickerViewController *imagePickerViewController;
+@property(nonatomic, strong) QMUIAlbumAutnLimitedTipView *authLimitedTipView;
 @end
 
 @implementation QMUIAlbumViewController
 
-- (void)didInitialize {
-    [super didInitialize];
-    _shouldShowDefaultLoadingView = YES;
-    [self qmui_applyAppearance];
-}
-
-- (void)setupNavigationItems {
-    [super setupNavigationItems];
-    if (!self.title) {
-        self.title = @"照片";
+- (QMUIAlbumAutnLimitedTipView *)authLimitedTipView {
+    if (!_authLimitedTipView) {
+        CGFloat tipViewHeight = 60;
+        CGFloat bottom = self.view.safeAreaInsets.bottom;
+        CGRect superViewFrame = self.tableView.frame;
+        CGRect frame = superViewFrame;
+        frame.size.height = tipViewHeight;
+        frame.origin.y = CGRectGetMaxY(superViewFrame) - tipViewHeight - bottom;
+        __weak typeof(self) weakSelf = self;
+        _authLimitedTipView = [[QMUIAlbumAutnLimitedTipView alloc] initWithFrame:frame];
+        _authLimitedTipView.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth;
+        _authLimitedTipView.backgroundColor = [[UIColor lightGrayColor] colorWithAlphaComponent:0.2];
+        [_authLimitedTipView setSetAlbumAutnHandle:^{
+            if (weakSelf) {
+                [[UIApplication sharedApplication] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString] options:@{} completionHandler:nil];
+            }
+        }];
     }
-    self.navigationItem.rightBarButtonItem = [UIBarButtonItem qmui_itemWithTitle:@"取消" target:self action:@selector(handleCancelSelectAlbum:)];
+    return _authLimitedTipView;
 }
 
-- (void)initTableView {
-    [super initTableView];
-    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+- (void)showOrHideAuthLimitedTipView:(BOOL)isShowTipView {
+    if (isShowTipView) {
+        if (self.authLimitedTipView.superview) {
+            [self.view bringSubviewToFront:self.authLimitedTipView];
+        } else {
+            [self.view addSubview:self.authLimitedTipView];
+        }
+    } else {
+        [self.authLimitedTipView removeFromSuperview];
+    }
 }
 
-- (void)viewDidLoad {
-    [super viewDidLoad];
-    if ([QMUIAssetsManager authorizationStatus] == QMUIAssetAuthorizationStatusNotAuthorized) {
+- (void)loadAlbumsDataAndUpdateUI {
+    if (QMUIAssetAuthorizationStatusNotAuthorized == [QMUIAssetsManager authorizationStatus]) {
         // 如果没有获取访问授权，或者访问授权状态已经被明确禁止，则显示提示语，引导用户开启授权
         NSString *tipString = self.tipTextWhenNoPhotosAuthorization;
         if (!tipString) {
@@ -189,6 +263,43 @@
             }];
         });
     }
+}
+
+- (void)photoLibraryDidChange:(PHChange *)changeInstance {
+    // 主线程更新
+    __weak typeof(self) wself = self;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [wself loadAlbumsDataAndUpdateUI];
+    });
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self loadAlbumsDataAndUpdateUI];
+}
+
+- (void)dealloc {
+    [[PHPhotoLibrary sharedPhotoLibrary] unregisterChangeObserver:self];
+}
+
+- (void)didInitialize {
+    [super didInitialize];
+    [[PHPhotoLibrary sharedPhotoLibrary] registerChangeObserver:self];
+    _shouldShowDefaultLoadingView = YES;
+    [self qmui_applyAppearance];
+}
+
+- (void)setupNavigationItems {
+    [super setupNavigationItems];
+    if (!self.title) {
+        self.title = @"照片";
+    }
+    self.navigationItem.rightBarButtonItem = [UIBarButtonItem qmui_itemWithTitle:@"取消" target:self action:@selector(handleCancelSelectAlbum:)];
+}
+
+- (void)initTableView {
+    [super initTableView];
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
 }
 
 - (void)sortAlbumArray {

@@ -62,7 +62,12 @@ void QMUISaveVideoAtPathToSavedPhotosAlbumWithAlbumAssetsGroup(NSString *videoPa
 + (QMUIAssetAuthorizationStatus)authorizationStatus {
     __block QMUIAssetAuthorizationStatus status;
     // 获取当前应用对照片的访问授权状态
-    PHAuthorizationStatus authorizationStatus = [PHPhotoLibrary authorizationStatus];
+    PHAuthorizationStatus authorizationStatus;
+    if (@available(iOS 14, *)) {
+        authorizationStatus = [PHPhotoLibrary authorizationStatusForAccessLevel:PHAccessLevelReadWrite];
+    } else {
+        authorizationStatus = [PHPhotoLibrary authorizationStatus];
+    }
     if (authorizationStatus == PHAuthorizationStatusRestricted || authorizationStatus == PHAuthorizationStatusDenied) {
         status = QMUIAssetAuthorizationStatusNotAuthorized;
     } else if (authorizationStatus == PHAuthorizationStatusNotDetermined) {
