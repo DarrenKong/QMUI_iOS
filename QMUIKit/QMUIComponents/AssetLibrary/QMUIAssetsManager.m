@@ -72,6 +72,8 @@ void QMUISaveVideoAtPathToSavedPhotosAlbumWithAlbumAssetsGroup(NSString *videoPa
         status = QMUIAssetAuthorizationStatusNotAuthorized;
     } else if (authorizationStatus == PHAuthorizationStatusNotDetermined) {
         status = QMUIAssetAuthorizationStatusNotDetermined;
+    } else if (authorizationStatus == PHAuthorizationStatusAuthorized) {
+        status = QMUIAssetAuthorizationStatusAuthorized;
     } else {
         status = QMUIAssetAuthorizationStatusAuthorized;
     }
