@@ -351,7 +351,9 @@
 
 - (void)pickLastAlbumGroupDirectlyIfCan {
     QMUIAssetsGroup *assetsGroup = [QMUIImagePickerHelper assetsGroupOfLastPickerAlbumWithUserIdentify:nil];
-    [self pickAlbumsGroup:assetsGroup animated:NO];
+    if (assetsGroup.phFetchResult.count > 0) {
+        [self pickAlbumsGroup:assetsGroup animated:NO];
+    }
 }
 
 #pragma mark - <UITableViewDelegate,UITableViewDataSource>
