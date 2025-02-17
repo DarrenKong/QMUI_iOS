@@ -330,6 +330,9 @@
         NSString *tipString = self.tipTextWhenPhotosEmpty ? : @"空照片";
         [self showEmptyViewWithText:tipString detailText:nil buttonTitle:nil buttonAction:nil];
     }
+    if (QMUIAssetAuthorizationStatusLimited == [QMUIAssetsManager authorizationStatus]) {
+        [self showOrHideAuthLimitedTipView:YES];
+    }
 }
 
 - (void)pickAlbumsGroup:(QMUIAssetsGroup *)assetsGroup animated:(BOOL)animated {
