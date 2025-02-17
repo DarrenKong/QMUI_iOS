@@ -121,11 +121,12 @@
         
         // 去设置按钮
         CGFloat setAuthButtonHeight = height / 2;
+        CGFloat setAuthButtonWidth = setAuthButtonHeight + 4;
         CGFloat setAuthButtonFontSize = setAuthButtonHeight / 2.5;
-        CGRect setAuthButtonFrame = CGRectMake(width - height, 0, height, height);;
+        CGRect setAuthButtonFrame = CGRectMake(width - height, 0, setAuthButtonWidth, height);;
         setAuthButtonFrame.size.height = setAuthButtonHeight;
         setAuthButtonFrame.origin.y = (height - setAuthButtonHeight) / 2;
-        setAuthButtonFrame.origin.x = width - height - 10;
+        setAuthButtonFrame.origin.x = width - setAuthButtonWidth - 10;
         UIButton *setAuthButton = [UIButton buttonWithType:UIButtonTypeCustom];
         [setAuthButton setBackgroundColor:UIColorMake(5, 87, 255)];
         [setAuthButton setAutoresizingMask:UIViewAutoresizingFlexibleLeftMargin];
@@ -134,12 +135,12 @@
         [setAuthButton.layer setCornerRadius:6];
         [setAuthButton.titleLabel setFont:[UIFont systemFontOfSize:setAuthButtonFontSize]];
         [setAuthButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-        [setAuthButton setTitle:@"去设置" forState:UIControlStateNormal];
+        [setAuthButton setTitle:@"立即设置" forState:UIControlStateNormal];
         [setAuthButton addTarget:self action:@selector(userSetAlbumAutnAction) forControlEvents:UIControlEventTouchUpInside];
         [self addSubview:setAuthButton];
         
         // 提示语
-        NSString *tipText = [NSString stringWithFormat:@"APP当前设置了相册访问限制，您可以通过点击\"%@\"按钮添加可以被访问的照片", setAuthButton.titleLabel.text];
+        NSString *tipText = [NSString stringWithFormat:@"你已设置%@只能访问相册部分照片，建议允许访问「所有照片」", [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleDisplayName"]];
         CGRect tipLabelFrame = setAuthButtonFrame;
         tipLabelFrame.origin.x = 10;
         tipLabelFrame.size.width = CGRectGetMinX(setAuthButtonFrame) - CGRectGetMinX(tipLabelFrame) - 5;
