@@ -325,11 +325,11 @@
         if (self.shouldShowDefaultLoadingView) {
             [self hideEmptyView];
         }
-        [self.tableView reloadData];
     } else {
         NSString *tipString = self.tipTextWhenPhotosEmpty ? : @"空照片";
         [self showEmptyViewWithText:tipString detailText:nil buttonTitle:nil buttonAction:nil];
     }
+    [self.tableView reloadData];
     if (QMUIAssetAuthorizationStatusLimited == [QMUIAssetsManager authorizationStatus]) {
         [self showOrHideAuthLimitedTipView:YES];
     }
