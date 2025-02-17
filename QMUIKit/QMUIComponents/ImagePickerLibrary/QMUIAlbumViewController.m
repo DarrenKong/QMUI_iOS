@@ -121,7 +121,7 @@
         
         // 去设置按钮
         CGFloat setAuthButtonHeight = height / 2;
-        CGFloat setAuthButtonWidth = setAuthButtonHeight + 4;
+        CGFloat setAuthButtonWidth = height + 4;
         CGFloat setAuthButtonFontSize = setAuthButtonHeight / 2.5;
         CGRect setAuthButtonFrame = CGRectMake(width - height, 0, setAuthButtonWidth, height);;
         setAuthButtonFrame.size.height = setAuthButtonHeight;
