@@ -16,6 +16,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property(nonatomic, strong) UILabel *titleLabel;
 @property(nonatomic, strong) __kindof UIView *titleView;
+
+@property(nonatomic, copy) void (^qmui_tapCloseBlock)(__kindof UIControl *sender);
+
 @end
 
 NS_ASSUME_NONNULL_END

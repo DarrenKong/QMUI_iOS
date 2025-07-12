@@ -94,6 +94,10 @@
     _navigationBar = [[QMUISheetPresentationNavigationBar alloc] init];
     self.navigationBar.hidden = !self.rootViewController.qmui_sheetPresentation.shouldShowNavigationBar;
     self.navigationBar.navigationItem = self.rootViewController.navigationItem;
+    __weak __typeof(self)weakSelf = self;
+    self.navigationBar.qmui_tapCloseBlock = ^(__kindof UIControl * _Nonnull sender) {
+        [weakSelf handleDimmingControlEvent];
+    };
     [self.containerView addSubview:self.navigationBar];
     
     [self.rootViewController didMoveToParentViewController:self];
@@ -143,7 +147,7 @@
         [self.navigationBar sizeToFit];
         navigationBarHeight = CGRectGetHeight(self.navigationBar.frame);
     }
-    CGFloat maximumWidth = MIN(QMUIHelper.screenSizeFor67InchAndiPhone14Later.width, CGRectGetWidth(self.view.bounds));
+    CGFloat maximumWidth = MIN(QMUIHelper.screenSizeFor69Inch.width, CGRectGetWidth(self.view.bounds));
     CGFloat maximumHeight = CGRectGetHeight(self.view.bounds);
     CGSize size = CGSizeZero;
     if (self.rootViewController.qmui_sheetPresentation.preferredSheetContentSizeBlock) {
