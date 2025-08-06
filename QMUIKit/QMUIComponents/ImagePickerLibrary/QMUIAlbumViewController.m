@@ -186,11 +186,14 @@
 
 #pragma mark - QMUIAlbumViewController
 
-@interface QMUIAlbumViewController ()<PHPhotoLibraryChangeObserver>
+@interface QMUIAlbumViewController () <PHPhotoLibraryChangeObserver>
 
 @property(nonatomic, strong) NSMutableArray<QMUIAssetsGroup *> *albumsArray;
 @property(nonatomic, strong) QMUIImagePickerViewController *imagePickerViewController;
 @property(nonatomic, strong) QMUIAlbumAutnLimitedTipView *authLimitedTipView;
+@property(nonatomic, assign) QMUIAssetAuthorizationStatus authStatus;
+@property(nonatomic, strong) NSString *appName;
+
 @end
 
 @implementation QMUIAlbumViewController
@@ -203,6 +206,7 @@
         CGRect frame = superViewFrame;
         frame.size.height = tipViewHeight;
         frame.origin.y = CGRectGetMaxY(superViewFrame) - tipViewHeight - bottom;
+        
         __weak typeof(self) weakSelf = self;
         _authLimitedTipView = [[QMUIAlbumAutnLimitedTipView alloc] initWithFrame:frame];
         _authLimitedTipView.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth;
@@ -229,53 +233,53 @@
 }
 
 - (void)loadAlbumsDataAndUpdateUI {
+    _authStatus = [QMUIAssetsManager authorizationStatus];
     if (QMUIAssetAuthorizationStatusNotAuthorized == [QMUIAssetsManager authorizationStatus]) {
         // 如果没有获取访问授权，或者访问授权状态已经被明确禁止，则显示提示语，引导用户开启授权
         NSString *tipString = self.tipTextWhenNoPhotosAuthorization;
         if (!tipString) {
-            NSDictionary *mainInfoDictionary = [[NSBundle mainBundle] infoDictionary];
-            NSString *appName = [mainInfoDictionary objectForKey:@"CFBundleDisplayName"];
-            if (!appName) {
-                appName = [mainInfoDictionary objectForKey:(NSString *)kCFBundleNameKey];
-            }
-            tipString = [NSString stringWithFormat:@"请在设备的\"设置-隐私-照片\"选项中，允许%@访问你的手机相册", appName];
+            tipString = [NSString stringWithFormat:@"请在设备的\"设置-隐私-照片\"选项中，允许%@访问你的手机相册", _appName];
         }
         [self showEmptyViewWithText:tipString detailText:nil buttonTitle:nil buttonAction:nil];
-    } else {
-        self.albumsArray = [[NSMutableArray alloc] init];
-        // 获取相册列表较为耗时，交给子线程去处理，因此这里需要显示 Loading
-        if ([self.albumViewControllerDelegate respondsToSelector:@selector(albumViewControllerWillStartLoading:)]) {
-            [self.albumViewControllerDelegate albumViewControllerWillStartLoading:self];
-        }
-        if (self.shouldShowDefaultLoadingView) {
-            [self showEmptyViewWithLoading];
-        }
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            [[QMUIAssetsManager sharedInstance] enumerateAllAlbumsWithAlbumContentType:self.contentType usingBlock:^(QMUIAssetsGroup *resultAssetsGroup) {
-                if (resultAssetsGroup) {
-                    [self.albumsArray addObject:resultAssetsGroup];
-                } else {
-                    // 意味着遍历完所有的相簿了
-                    [self sortAlbumArray];
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        [self refreshAlbumAndShowEmptyTipIfNeed];
-                    });
-                }
-            }];
-        });
+        return;
     }
+    
+    // 获取相册列表较为耗时，交给子线程去处理，因此这里需要显示 Loading
+    if ([self.albumViewControllerDelegate respondsToSelector:@selector(albumViewControllerWillStartLoading:)]) {
+        [self.albumViewControllerDelegate albumViewControllerWillStartLoading:self];
+    }
+    if (self.shouldShowDefaultLoadingView) {
+        [self showEmptyViewWithLoading];
+    }
+    
+    self.albumsArray = [[NSMutableArray alloc] init];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        [[QMUIAssetsManager sharedInstance] enumerateAllAlbumsWithAlbumContentType:self.contentType usingBlock:^(QMUIAssetsGroup *resultAssetsGroup) {
+            if (resultAssetsGroup) {
+                [self.albumsArray addObject:resultAssetsGroup];
+            } else {
+                // 意味着遍历完所有的相簿了
+                [self sortAlbumArray];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [self refreshAlbumAndShowEmptyTipIfNeed];
+                });
+            }
+        }];
+    });
 }
 
 - (void)photoLibraryDidChange:(PHChange *)changeInstance {
     // 主线程更新
     __weak typeof(self) wself = self;
     dispatch_async(dispatch_get_main_queue(), ^{
+        _authStatus = [QMUIAssetsManager authorizationStatus];
         [wself loadAlbumsDataAndUpdateUI];
     });
 }
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    [[PHPhotoLibrary sharedPhotoLibrary] registerChangeObserver:self];
     [self loadAlbumsDataAndUpdateUI];
 }
 
@@ -285,9 +289,13 @@
 
 - (void)didInitialize {
     [super didInitialize];
-    [[PHPhotoLibrary sharedPhotoLibrary] registerChangeObserver:self];
     _shouldShowDefaultLoadingView = YES;
     [self qmui_applyAppearance];
+}
+
+- (void)setupAppName {
+    NSDictionary *infoDict = [[NSBundle mainBundle] infoDictionary];
+    _appName = infoDict[@"CFBundleDisplayName"] ?: infoDict[(NSString *)kCFBundleNameKey];
 }
 
 - (void)setupNavigationItems {
@@ -323,6 +331,7 @@
         if ([self.albumViewControllerDelegate respondsToSelector:@selector(albumViewControllerWillFinishLoading:)]) {
             [self.albumViewControllerDelegate albumViewControllerWillFinishLoading:self];
         }
+        
         if (self.shouldShowDefaultLoadingView) {
             [self hideEmptyView];
         }
@@ -330,14 +339,15 @@
         NSString *tipString = self.tipTextWhenPhotosEmpty ? : @"空照片";
         [self showEmptyViewWithText:tipString detailText:nil buttonTitle:nil buttonAction:nil];
     }
+    
     [self.tableView reloadData];
-    if (QMUIAssetAuthorizationStatusLimited == [QMUIAssetsManager authorizationStatus]) {
-        [self showOrHideAuthLimitedTipView:YES];
-    }
+    
+    BOOL showTip = _authStatus == QMUIAssetAuthorizationStatusLimited;
+    [self showOrHideAuthLimitedTipView:showTip];
 }
 
 - (void)pickAlbumsGroup:(QMUIAssetsGroup *)assetsGroup animated:(BOOL)animated {
-    if (!assetsGroup) return;
+    if (!assetsGroup || !self.albumViewControllerDelegate) return;
     
     if (!self.imagePickerViewController) {
         self.imagePickerViewController = [self.albumViewControllerDelegate imagePickerViewControllerForAlbumViewController:self];
